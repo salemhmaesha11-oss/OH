@@ -1,0 +1,14 @@
+{
+  "name": "oh-dental-supplies",
+  "version": "1.0.0",
+  "private": true,
+  "description": "موقع مركز OH لإدارة مستلزمات طب الأسنان",
+  "scripts": {
+    "dev": "serve -s .",
+    "dev:netlify": "netlify dev",
+    "seed:demo-staff": "node scripts/create-demo-staff.mjs"
+  },
+  "devDependencies": {
+    "serve": "^14.2.4"
+  }
+}

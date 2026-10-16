@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 72" role="img" aria-labelledby="title">
+  <title id="title">شعار مركز OH</title>
+  <rect x="2" y="2" width="176" height="68" rx="12" fill="#07130a"/>
+  <path d="M22 58 15 50l10-8-7-7 11-8-5-8 13-11M142 60l-6-8 12-9-5-8 12-7-3-9 11-7" fill="none" stroke="#4bc927" stroke-width="3" stroke-linecap="round" opacity=".85"/>
+  <text x="90" y="53" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="48" font-weight="900" letter-spacing="-3" fill="#51d32a" stroke="#f4f8f0" stroke-width="5" paint-order="stroke">OH</text>
+</svg>
