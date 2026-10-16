@@ -2,8 +2,9 @@
   "name": "oh-dental-supplies",
   "version": "1.0.0",
   "private": true,
-  "description": "موقع مركز OH لإدارة مستلزمات طب الأسنان",
+  "description": "إدارة مستلزمات طب الأسنان OH موقع مركز",
   "scripts": {
+    "build": "echo 'No build required'",
     "dev": "serve -s .",
     "dev:netlify": "netlify dev",
     "seed:demo-staff": "node scripts/create-demo-staff.mjs"
