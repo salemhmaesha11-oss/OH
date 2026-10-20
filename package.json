@@ -10,6 +10,10 @@
     "seed:demo-staff": "node scripts/create-demo-staff.mjs"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
     "serve": "^14.2.4"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.5.3"
   }
 }

@@ -4,6 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f8f7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="/pwa-icon-192.png">
+  <link rel="apple-touch-icon" href="/pwa-icon-180.png">
   <title>OH | مستلزمات طب الأسنان</title>
   <meta name="description" content="مركز OH لمستلزمات طب الأسنان: تصفح المواد والأسعار والطلبات.">
   <link rel="canonical" href="https://ohshop.netlify.app/">
@@ -194,7 +199,7 @@
       <div class="section-head"><div><h3>جهّز طلبك</h3><p>اختر المواد المطلوبة، وستكون جاهزة خلال يومي عمل كحد أقصى.</p></div></div>
       <div class="order-layout">
         <div class="panel"><div class="panel-title"><h3>المواد المتاحة</h3></div><input id="productSearch" class="search" placeholder="ابحث عن مادة..." aria-label="ابحث عن مادة"><div class="category-row" id="categories"></div><div class="products" id="productGrid"></div></div>
-        <div class="panel cart"><div class="panel-title"><h3>طلبك</h3><span class="pill" id="cartCount">0 قطع</span></div><div class="field"><label for="studentName">اسم الطالب الثلاثي</label><input id="studentName" placeholder="اكتب اسمك الثلاثي" maxlength="80" autocomplete="name" required aria-describedby="studentNameHint"><small id="studentNameHint" class="subtle">أدخل ثلاثة أجزاء للاسم على الأقل.</small></div><div class="field"><label for="studentPhone">رقم الموبايل</label><input id="studentPhone" type="tel" placeholder="09xxxxxxxx" maxlength="10" pattern="09[0-9]{8}" autocomplete="tel" inputmode="numeric" required aria-describedby="studentPhoneHint"><small id="studentPhoneHint" class="subtle">10 أرقام بالضبط، تبدأ بـ 09.</small></div><div id="cartLines"></div><div class="cart-total"><span>الإجمالي</span><span id="cartTotal">0.00</span></div><button id="submitOrder" class="btn full">إرسال الطلب ←</button><p class="subtle">بإرسال الطلب، تؤكد توفر المواد المطلوبة. سيعمل المركز على تجهيزه خلال يومي عمل.</p></div>
+        <div class="panel cart"><div class="panel-title"><h3>طلبك</h3><span class="pill" id="cartCount">0 قطع</span></div><div class="field"><label for="studentName">اسم الطالب الثلاثي</label><input id="studentName" placeholder="اكتب اسمك الثلاثي" maxlength="80" autocomplete="name" required aria-describedby="studentNameHint"><small id="studentNameHint" class="subtle">أدخل ثلاثة أجزاء للاسم على الأقل.</small></div><div class="field"><label for="studentPhone">رقم الموبايل</label><input id="studentPhone" type="tel" placeholder="09xxxxxxxx" maxlength="10" pattern="09[0-9]{8}" autocomplete="tel" inputmode="numeric" required aria-describedby="studentPhoneHint"><small id="studentPhoneHint" class="subtle">10 أرقام بالضبط، تبدأ بـ 09.</small></div><div id="cartLines"></div><div class="cart-total"><span>الإجمالي</span><span id="cartTotal">0.00</span></div><button id="submitOrder" class="btn full">إرسال الطلب ←</button><p id="offlineQueueStatus" class="subtle" role="status" aria-live="polite"></p><p class="subtle">بإرسال الطلب، تؤكد توفر المواد المطلوبة. سيعمل المركز على تجهيزه خلال يومي عمل.</p></div>
       </div>
       <div class="panel" style="margin-top:18px"><div class="panel-title"><h3>طلباتي</h3></div><div id="studentOrders"></div></div>
     </section>
@@ -280,15 +285,25 @@
   </main>
 </div>
 <div class="modal-backdrop" id="modalBackdrop"><div class="modal" id="modal"></div></div><div class="toast" id="toast"></div><button class="back-to-top" id="backToTop" type="button" aria-label="العودة إلى أعلى الصفحة" title="العودة إلى الأعلى">↑</button>
+<script src="/pwa.js"></script>
 <script>
 (() => {
   const SUPABASE_URL="https://ukxtuomyjmpdvkiyarjx.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY="sb_publishable_QJow-SjOfu2eU-6g7I7V0w_pkEKjZBJ";
+  window.ohPwaQueue.configure({supabaseUrl:SUPABASE_URL,publishableKey:SUPABASE_PUBLISHABLE_KEY});
   const seed = {
     products:[],orders:[],sales:[],saleOrders:[],materialRequests:[],cart:{},role:"student"
   };
+  function createRequestId(){
+    if(crypto.randomUUID)return crypto.randomUUID();
+    const bytes=crypto.getRandomValues(new Uint8Array(16));
+    bytes[6]=(bytes[6]&0x0f)|0x40;bytes[8]=(bytes[8]&0x3f)|0x80;
+    const hex=Array.from(bytes,value=>value.toString(16).padStart(2,"0")).join("");
+    return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+  }
   function todayISO(date=new Date()){const local=new Date(date.getTime()-date.getTimezoneOffset()*60000);return local.toISOString().slice(0,10)}
-  let state=seed;
+  let state={...seed};
+  try{state.cart={...seed.cart,...JSON.parse(localStorage.getItem("oh-student-cart")||"{}")}}catch{state.cart={...seed.cart}}
   let accountingReport=null;
   let category="الكل", charts={};
   let sectionObserver=null,smoothScrollFrame=0;
@@ -302,13 +317,16 @@
   const studentInteractionNotices=new Set();
   let productDetailsMigrationNoticeShown=false;
   const dayLabel=d=>new Date(d+"T12:00:00").toLocaleDateString("ar",{day:"numeric",month:"short"});
-  async function dbRequest(path,{method="GET",body,staff=false,prefer,range}={}){
+  async function dbRequest(path,{method="GET",body,staff=false,prefer,range,timeoutMs}={}){
     const headers={apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${staff&&sessionData?.access_token?sessionData.access_token:SUPABASE_PUBLISHABLE_KEY}`};
     if(range){headers.Range=range;headers["Range-Unit"]="items"}
     if(body!==undefined){headers["Content-Type"]="application/json";if(prefer)headers.Prefer=prefer}
-    let response;
-    try{response=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{method,headers,...(body===undefined?{}:{body:JSON.stringify(body)})})}
-    catch{throw new Error("تعذر الاتصال بقاعدة البيانات. تحقق من إعداد Supabase واتصال الشبكة.")}
+    let response,timeout;
+    const controller=timeoutMs?new AbortController():null;
+    if(controller)timeout=setTimeout(()=>controller.abort(),timeoutMs);
+    try{response=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{method,headers,...(body===undefined?{}:{body:JSON.stringify(body)}),...(controller?{signal:controller.signal}:{})})}
+    catch{const error=new Error("تعذر الاتصال بقاعدة البيانات. تحقق من إعداد Supabase واتصال الشبكة.");error.name="OfflineRequestError";throw error}
+    finally{if(timeout)clearTimeout(timeout)}
     let result;
     try{result=await response.json()}catch{result=null}
     if(!response.ok)throw new Error(result?.message||result?.hint||"تعذر تنفيذ العملية على قاعدة البيانات.");
@@ -329,6 +347,7 @@
         products=await dbRequest(fallbackPath,{staff:isStaff});
       }
       state.products=products.map(p=>({id:p.id,name:p.name,category:p.category,icon:p.icon,image_url:p.image_url||"",details:p.details||"",price:Number(p.price),stock:isStaff?p.stock:null,available:isStaff?p.stock>0:p.in_stock,sold:p.total_sold||0}));
+      if(state.role==="student")localStorage.setItem("oh-cached-products",JSON.stringify(state.products));
       if(state.role!=="student"){
         const [orders,sales]=await Promise.all([
           dbRequest("orders?select=id,order_number,student_name,student_phone,status,created_at,order_items(id,product_id,product_name,quantity,unit_price)&order=created_at.desc",{staff:true}),
@@ -337,9 +356,17 @@
         state.orders=orders.map(mapOrder);state.saleOrders=mapSaleOrders(sales);state.sales=mapSales(sales);
       }else{state.orders=JSON.parse(localStorage.getItem("oh-student-orders")||"[]");state.sales=[];state.saleOrders=[]}
       render();
-    }catch(error){toast(error.message)}
+    }catch(error){
+      if(state.role==="student"){
+        try{
+          const cachedProducts=localStorage.getItem("oh-cached-products");
+          if(cachedProducts){state.products=JSON.parse(cachedProducts);render();toast("أنت غير متصل؛ يعرض التطبيق آخر نسخة محفوظة من المواد.");return}
+        }catch{localStorage.removeItem("oh-cached-products")}
+      }
+      toast(error.message)
+    }
   }
-  function save(){}
+  function save(){if(state.role==="student")try{localStorage.setItem("oh-student-cart",JSON.stringify(state.cart))}catch{toast("تعذر حفظ السلة على هذا الجهاز.")}}
   function toast(message){const el=$("#toast");el.textContent=message;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2600)}
   function statusBadge(s){if(s==="ready")return '<span class="pill ready">جاهز للاستلام</span>';if(s==="preparing")return '<span class="pill">قيد التجهيز</span>';if(s==="cancelled")return '<span class="pill low">ملغي</span>';return '<span class="pill">بانتظار التجهيز</span>'}
   function orderTotal(o){return o.items.reduce((n,i)=>n+i.qty*i.price,0)}
@@ -369,6 +396,7 @@
     chart("ordersChart",["قبل 6 أيام","قبل 5 أيام","قبل 4 أيام","قبل 3 أيام","قبل يومين","أمس","اليوم"],daysBack(7).map(d=>state.orders.filter(o=>o.date===d).length),"#167c70","طلب");
   }
   function renderStudent(){
+    save();
     const cats=["الكل",...new Set(state.products.map(p=>p.category))];
     $("#categories").innerHTML=cats.map(c=>`<button class="chip ${c===category?"active":""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("");
     const query=$("#productSearch").value.trim().toLowerCase();
@@ -1113,13 +1141,38 @@
     if(state.role!=="student"&&entries.some(([id,qty])=>qty>state.products.find(p=>p.id===id).stock)){toast("إحدى المواد لا تتوفر بالكمية المطلوبة.");return}
     button.disabled=true;
     try{
-      const response=await dbRequest("rpc/place_guest_order",{method:"POST",body:{p_student_name:name,p_student_phone:phone,p_items:entries.map(([product_id,quantity])=>({product_id,quantity}))}});
+      const requestId=createRequestId(),body={p_student_name:name,p_student_phone:phone,p_items:entries.map(([product_id,quantity])=>({product_id,quantity})),p_request_id:requestId};
+      let response;
+      try{
+        response=await dbRequest("rpc/place_guest_order",{method:"POST",body,timeoutMs:15000});
+      }
+      catch(error){
+        if(error.name!=="OfflineRequestError")throw error;
+        await window.ohPwaQueue.enqueue({id:requestId,body});
+        state.cart={};render();await refreshOfflineQueueStatus();
+        toast("حُفظ طلبك على هذا الجهاز وسيُرسل تلقائياً عند عودة الاتصال.");
+        return;
+      }
       const order={id:`SN-${response.order_number}`,name,phone,date:todayISO(new Date(response.created_at)),items:response.items.map(i=>({productId:i.product_id,name:i.product_name,qty:i.quantity,price:Number(i.unit_price)})),status:"pending"};
       const studentOrders=JSON.parse(localStorage.getItem("oh-student-orders")||"[]").filter(o=>o.phone!==phone);studentOrders.unshift(order);localStorage.setItem("oh-student-orders",JSON.stringify(studentOrders));
       state.orders=studentOrders;state.cart={};await loadLiveData();render();toast(`تم إرسال طلبك رقم ${order.id}! سيُجهّز خلال يومي عمل كحد أقصى.`);
     }catch(error){toast(error.message)}
     finally{button.disabled=false}
   };
+  async function refreshOfflineQueueStatus(){
+    const status=$("#offlineQueueStatus");
+    if(!status||!window.ohPwaQueue)return;
+    const counts=await window.ohPwaQueue.counts();
+    status.textContent=counts.failed
+      ?`هناك ${counts.failed} طلب محفوظ تعذّر اعتماده؛ تحقق من توفر المواد والاتصال.`
+      :counts.pending?`هناك ${counts.pending} طلب محفوظ بانتظار عودة الاتصال.`:"";
+  }
+  window.addEventListener("oh-pwa-queue-change",event=>{
+    refreshOfflineQueueStatus().catch(error=>console.error("تعذر تحديث حالة الطلبات المحفوظة:",error));
+    if(event.detail?.type==="QUEUE_SYNCED")toast("تم إرسال طلبك المحفوظ بعد عودة الاتصال.");
+    if(event.detail?.type==="QUEUE_FAILED")toast("تعذّر اعتماد طلب محفوظ؛ تحقق من توفر المواد.");
+  });
+  refreshOfflineQueueStatus().catch(error=>console.error("تعذر قراءة الطلبات المحفوظة:",error));
   $("#addProduct").onclick=()=>productForm(null);
   $("#openSales").onclick=salesForm;
   $("#modalBackdrop").onclick=e=>{if(e.target===$("#modalBackdrop"))closeModal()};
