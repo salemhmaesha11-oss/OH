@@ -1,7 +1,7 @@
 {
   "id": "/",
   "name": "مركز OH لمستلزمات طب الأسنان",
-  "short_name": "OH",
+  "short_name": "OH Store",
   "description": "تصفح مستلزمات طب الأسنان وأرسل طلباتك إلى مركز OH.",
   "lang": "ar",
   "dir": "rtl",
@@ -11,7 +11,10 @@
   "background_color": "#f5f8f6",
   "theme_color": "#f4f8f7",
   "orientation": "portrait-primary",
-  "categories": ["shopping", "business"],
+  "categories": [
+    "shopping",
+    "business"
+  ],
   "icons": [
     {
       "src": "/pwa-icon-192.png",
